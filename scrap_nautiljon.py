@@ -5,6 +5,7 @@ import os
 import re
 import json
 import time
+import uuid
 import requests
 
 from selenium import webdriver
@@ -272,6 +273,8 @@ class ScrapMangaNautiljon:
 
     def __write_data(self, manga_title:str) -> None:
         self.__data.update({ "date": time.strftime("%Y-%m-%d %H:%M:%S") })
+        self.__data.update({ "id": str(uuid.uuid4()) })
+
         data_path = os.path.join(self.__data_folder, manga_title, "data.json")
 
         with open(data_path, "w", encoding="utf8") as f:
