@@ -93,10 +93,27 @@ class ScrapMangaNautiljon:
         self.__driver.find_element(By.ID, "didomi-notice-agree-button").click()
         time.sleep(1)
 
-        manga_block = self.__driver.find_elements(By.CLASS_NAME, "gs-webResult.gs-result")
-        link = manga_block[0].find_element(By.TAG_NAME, "a").get_attribute("href")
-        if link is None:
-            raise ScrapNautiljonException("Link not found")
+        link = ""
+
+        manga_blocks = self.__driver.find_elements(By.CLASS_NAME, "gs-webResult.gs-result")
+
+        found = False
+        for manga_block in manga_blocks:
+            child_elements = manga_block.find_elements(By.XPATH, ".//*")
+            for child in child_elements:
+                if re.search("mangas", child.text, re.IGNORECASE):
+                    link = manga_block.find_element(By.TAG_NAME, "a").get_attribute("href")
+                    if link is None:
+                        raise ScrapNautiljonException("Link not found")
+
+                    found = True
+                    break
+
+            if found:
+                break
+
+        if not link:
+            raise ScrapNautiljonException("Manga link not found")
 
         link = link.strip()
         self.__data.update({ "link": link })
@@ -139,7 +156,10 @@ class ScrapMangaNautiljon:
                 if re.search("titre original", span.text, re.IGNORECASE):
                     title_original = span.find_element(By.XPATH, "..").text.split(" / ")[0].strip()
                     title_original = title_original.replace("Titre original : ", "").strip()
-                    title_japanese = span.find_element(By.XPATH, "..").text.split(" / ")[1].strip()
+                    title_japanese = span.find_element(By.XPATH, "..").text.strip()
+
+                    if re.match(r'/', title_japanese):
+                        title_japanese = title_japanese.split(" / ")[1].strip()
 
                     self.__data.update({
                         "title original": title_original,
@@ -364,14 +384,22 @@ class ScrapIMGNautiljon:
 
 
 if __name__ == "__main__":
+    # Arifureta (De zéro à héros) need spec (anime first and not manga on second)
+    # reincarned in sword => same (anime first)
+    # kuma kumu kuma bear => same (anime first)
+
+    scrap = ScrapMangaNautiljon("kuma kuma kuma", debug=True)
+    
     # scrap = ScrapMangaNautiljon("moi, quand je me réincarne en slime", debug=True)
     # scrap = ScrapMangaNautiljon("legende vivante", debug=False)
-    scrap = ScrapMangaNautiljon("sexy cosplay doll", debug=False)
+    # scrap = ScrapMangaNautiljon("sexy cosplay doll", debug=False)
     # scrap = ScrapMangaNautiljon("Fun Territory", debug=False)
     # scrap = ScrapMangaNautiljon("rising shield", debug=False)
     # scrap = ScrapMangaNautiljon("demon slave", debug=False)
     # scrap = ScrapMangaNautiljon("dungeon harem", debug=False)
     # scrap = ScrapMangaNautiljon("cave king", debug=False)
     # scrap = ScrapMangaNautiljon("dr stone", debug=False)
+    # scrap = ScrapMangaNautiljon("noble adventure", debug=False)
+    # scrap = ScrapMangaNautiljon("chilling in another", debug=False)
 
     scrap.scrap()
