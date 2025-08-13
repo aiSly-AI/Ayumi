@@ -364,5 +364,14 @@ class ScrapIMGNautiljon:
 
 
 if __name__ == "__main__":
-    scrap = ScrapMangaNautiljon("moi, quand je me réincarne en slime", debug=True)
+    # scrap = ScrapMangaNautiljon("moi, quand je me réincarne en slime", debug=True)
+    # scrap = ScrapMangaNautiljon("legende vivante", debug=False)
+    scrap = ScrapMangaNautiljon("sexy cosplay doll", debug=False)
+    # scrap = ScrapMangaNautiljon("Fun Territory", debug=False)
+    # scrap = ScrapMangaNautiljon("rising shield", debug=False)
+    # scrap = ScrapMangaNautiljon("demon slave", debug=False)
+    # scrap = ScrapMangaNautiljon("dungeon harem", debug=False)
+    # scrap = ScrapMangaNautiljon("cave king", debug=False)
+    # scrap = ScrapMangaNautiljon("dr stone", debug=False)
+
     scrap.scrap()
