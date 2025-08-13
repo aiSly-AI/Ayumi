@@ -385,12 +385,9 @@ class ScrapIMGNautiljon:
 
 if __name__ == "__main__":
     # Arifureta (De zéro à héros) need spec (anime first and not manga on second)
-    # reincarned in sword => same (anime first)
-    # kuma kumu kuma bear => same (anime first)
 
-    scrap = ScrapMangaNautiljon("kuma kuma kuma", debug=True)
-    
     # scrap = ScrapMangaNautiljon("moi, quand je me réincarne en slime", debug=True)
+    scrap = ScrapMangaNautiljon("kuma kuma kuma", debug=False)
     # scrap = ScrapMangaNautiljon("legende vivante", debug=False)
     # scrap = ScrapMangaNautiljon("sexy cosplay doll", debug=False)
     # scrap = ScrapMangaNautiljon("Fun Territory", debug=False)
@@ -401,5 +398,6 @@ if __name__ == "__main__":
     # scrap = ScrapMangaNautiljon("dr stone", debug=False)
     # scrap = ScrapMangaNautiljon("noble adventure", debug=False)
     # scrap = ScrapMangaNautiljon("chilling in another", debug=False)
+    # scrap = ScrapMangaNautiljon("reincarned in sword", debug=False)
 
     scrap.scrap()
