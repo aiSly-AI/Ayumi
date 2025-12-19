@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, onUnmounted } from 'vue'
 
 const settings = ref<{ libraryPath?: string; pythonPath?: string; scraperPath?: string }>({})
 const series = ref<any[]>([])
@@ -7,15 +7,15 @@ const q = ref('')
 const loading = ref(false)
 const errorMsg = ref<string | null>(null)
 
-async function refreshSettings() {
+async function refreshSettings(): Promise<void> {
   settings.value = await window.api.getSettings()
 }
 
-async function refreshLibrary() {
+async function refreshLibrary(): Promise<void> {
   series.value = await window.api.scanLibrary()
 }
 
-async function pickLibrary() {
+async function pickLibrary(): Promise<void> {
   const p = await window.api.selectLibraryFolder()
   if (p) {
     await refreshSettings()
@@ -23,17 +23,17 @@ async function pickLibrary() {
   }
 }
 
-async function pickPython() {
+async function pickPython(): Promise<void> {
   const p = await window.api.selectPython()
   if (p) await refreshSettings()
 }
 
-async function pickScraper() {
+async function pickScraper(): Promise<void> {
   const p = await window.api.selectScraper()
   if (p) await refreshSettings()
 }
 
-async function addBySearch() {
+async function addBySearch(): Promise<void> {
   errorMsg.value = null
   loading.value = true
   try {
@@ -64,12 +64,28 @@ async function confirmAdd(): Promise<void> {
   if (!errorMsg.value) showAdd.value = false
 }
 
-function onKeydown(e: KeyboardEvent) {
-  if (e.ctrlKey && e.key.toLowerCase() === 'k') {
-    e.preventDefault()
-    openAdd()
-  }
-}
+const scraperLog = ref('')
+const scraperState = ref<'idle' | 'running' | 'done' | 'error'>('idle')
+
+let off: null | (() => void) = null
+
+onMounted(() => {
+  off = window.api.onScraperProgress((p: any) => {
+    if (p.type === 'start') {
+      scraperState.value = 'running'
+      scraperLog.value = `Recherche: ${p.query}\n`
+    } else if (p.type === 'stdout' || p.type === 'stderr') {
+      scraperLog.value += p.text
+    } else if (p.type === 'done') {
+      scraperState.value = p.ok ? 'done' : 'error'
+    } else if (p.type === 'error') {
+      scraperState.value = 'error'
+      scraperLog.value += `\n[ERROR] ${p.message}\n`
+    }
+  })
+})
+
+onUnmounted(() => off?.())
 </script>
 
 <template>
@@ -109,6 +125,16 @@ function onKeydown(e: KeyboardEvent) {
       <p v-if="errorMsg" style="color:#ff6b6b; white-space:pre-wrap; margin-top:12px">
         {{ errorMsg }}
       </p>
+
+      <div v-if="scraperState === 'running'" style="margin-top:12px;">
+        <div style="display:flex; align-items:center; gap:8px; opacity:.9;">
+          <span>⏳ Scraping en cours…</span>
+        </div>
+
+        <pre style="margin-top:10px; max-height:220px; overflow:auto; background:#0b0b0b; padding:10px; border-radius:10px; font-size:12px; line-height:1.3;">
+        {{ scraperLog }}
+        </pre>
+      </div>
 
       <p style="opacity:.7; margin-top:10px; font-size:12px;">
         Astuce: appuie sur Entrée pour lancer.

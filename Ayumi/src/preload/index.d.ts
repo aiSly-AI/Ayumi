@@ -9,6 +9,7 @@ declare global {
       searchAndRescan: (query: string) => Promise<any[]>
       selectPython: () => Promise<string | null>
       selectScraper: () => Promise<string | null>
+      onScraperProgress: (cb: (payload: any) => void) => () => void
     }
     electron: typeof import('@electron-toolkit/preload').electronAPI
   }

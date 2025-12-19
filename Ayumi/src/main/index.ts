@@ -10,7 +10,7 @@ import icon from '../../resources/icon.png?asset'
 
 import { loadSettings, saveSettings } from './library/settings'
 import { scanLibrary } from './library/scanLibrary'
-import { runPython } from './python/runPython'
+import { spawn } from 'node:child_process'
 
 
 function createWindow(): void {
@@ -43,6 +43,10 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+}
+
+function cleanPath(p: string): string {
+  return p.trim().replace(/^"+|"+$/g, '')
 }
 
 ipcMain.handle('settings:get', () => {
@@ -94,35 +98,71 @@ ipcMain.handle('settings:selectScraper', async () => {
 })
 
 ipcMain.handle('scraper:search', async (_event, query: string) => {
-  const settings = loadSettings()
+   const settings = loadSettings()
   const { libraryPath, pythonPath, scraperPath } = settings
 
   if (!libraryPath) throw new Error('Aucun dossier bibliothèque configuré')
   if (!pythonPath || !fs.existsSync(pythonPath)) throw new Error('Chemin Python invalide')
   if (!scraperPath || !fs.existsSync(scraperPath)) throw new Error('Chemin scraper invalide')
+  if (!query || !query.trim()) throw new Error('Requête vide')
 
-  // ✅ Parent du dossier bibliothèque
+  // IMPORTANT: tu lances le scraper dans le parent pour éviter data/data
   const parent = path.dirname(libraryPath)
-
-  // On s’assure que le parent existe
   if (!fs.existsSync(parent)) fs.mkdirSync(parent, { recursive: true })
-
-  // (Optionnel) créer la bibliothèque si elle n’existe pas encore
   if (!fs.existsSync(libraryPath)) fs.mkdirSync(libraryPath, { recursive: true })
 
-  const res = await runPython(
-    pythonPath.trim().replace(/^"+|"+$/g, ''),
-    scraperPath.trim().replace(/^"+|"+$/g, ''),
-    ['-q', query.trim()],
-    parent // ✅ ici : pas libraryPath
-  )
+  const win = BrowserWindow.getAllWindows()[0]
+  const py = cleanPath(pythonPath)
+  const script = cleanPath(scraperPath)
 
-  if (res.code !== 0) {
-    throw new Error(`Erreur scraper (code ${res.code})\n${res.stderr || res.stdout || ''}`)
-  }
+  // Événement début
+  win?.webContents.send('scraper:progress', { type: 'start', query: query.trim() })
 
-  // ✅ maintenant le scraper a écrit dans parent\data\...
-  return scanLibrary(libraryPath)
+  return await new Promise((resolve, reject) => {
+    const child = spawn(py, [script, '-q', query.trim()], {
+      cwd: parent,
+      windowsHide: true,
+      shell: false
+    })
+
+    let stdoutBuf = ''
+    let stderrBuf = ''
+
+    const pushLines = (chunk: Buffer, channel: 'stdout' | 'stderr') => {
+      const str = chunk.toString()
+      if (channel === 'stdout') stdoutBuf += str
+      else stderrBuf += str
+
+      // On envoie le texte brut (ou ligne par ligne)
+      win?.webContents.send('scraper:progress', { type: channel, text: str })
+    }
+
+    child.stdout.on('data', (d) => pushLines(d, 'stdout'))
+    child.stderr.on('data', (d) => pushLines(d, 'stderr'))
+
+    child.on('error', (err) => {
+      win?.webContents.send('scraper:progress', { type: 'error', message: String(err) })
+      reject(err)
+    })
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        win?.webContents.send('scraper:progress', {
+          type: 'done',
+          ok: false,
+          code,
+          stderr: stderrBuf
+        })
+        reject(new Error(`Scraper error (${code})\n${stderrBuf || stdoutBuf}`))
+        return
+      }
+
+      // Success: rescan
+      const next = scanLibrary(libraryPath)
+      win?.webContents.send('scraper:progress', { type: 'done', ok: true })
+      resolve(next)
+    })
+  })
 })
 
 // This method will be called when Electron has finished

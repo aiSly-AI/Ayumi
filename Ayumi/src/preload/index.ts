@@ -8,7 +8,12 @@ const api = {
   scanLibrary: () => ipcRenderer.invoke('library:scan'),
   searchAndRescan: (query: string) => ipcRenderer.invoke('scraper:search', query),
   selectPython: () => ipcRenderer.invoke('settings:selectPython'),
-  selectScraper: () => ipcRenderer.invoke('settings:selectScraper')
+  selectScraper: () => ipcRenderer.invoke('settings:selectScraper'),
+  onScraperProgress: (cb: (payload: any) => void) => {
+    const handler = (_: any, payload: any) => cb(payload)
+    ipcRenderer.on('scraper:progress', handler)
+    return () => ipcRenderer.removeListener('scraper:progress', handler)
+  }
 }
 
 // Expose seulement une fois, en respectant context isolation
