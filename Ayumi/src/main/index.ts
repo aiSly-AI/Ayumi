@@ -45,14 +45,6 @@ function createWindow(): void {
   }
 }
 
-const SCRAPER_PATH = path.resolve('scrapers', 'scrap_nautiljon')
-
-function normalizeScriptPath(p: string): string {
-  // si tu as un fichier .py mais tu passes sans extension
-  if (p.toLowerCase().endsWith('.py')) return p
-  return p // laisse tel quel si ton fichier est bien sans extension et exécutable par python
-}
-
 ipcMain.handle('settings:get', () => {
   return loadSettings()
 })
@@ -102,56 +94,34 @@ ipcMain.handle('settings:selectScraper', async () => {
 })
 
 ipcMain.handle('scraper:search', async (_event, query: string) => {
-  if (!query || !query.trim()) {
-    throw new Error('Requête vide')
-  }
-
   const settings = loadSettings()
   const { libraryPath, pythonPath, scraperPath } = settings
 
-  if (!libraryPath) {
-    throw new Error('Aucun dossier bibliothèque configuré')
-  }
+  if (!libraryPath) throw new Error('Aucun dossier bibliothèque configuré')
+  if (!pythonPath || !fs.existsSync(pythonPath)) throw new Error('Chemin Python invalide')
+  if (!scraperPath || !fs.existsSync(scraperPath)) throw new Error('Chemin scraper invalide')
 
-  if (!fs.existsSync(libraryPath)) {
-    fs.mkdirSync(libraryPath, { recursive: true })
-  }
+  // ✅ Parent du dossier bibliothèque
+  const parent = path.dirname(libraryPath)
 
-  if (!pythonPath || !fs.existsSync(pythonPath)) {
-    throw new Error('Chemin Python invalide (venv non configuré)')
-  }
-  if (!scraperPath || !fs.existsSync(scraperPath)) {
-    throw new Error('Chemin du scraper invalide')
-  }
+  // On s’assure que le parent existe
+  if (!fs.existsSync(parent)) fs.mkdirSync(parent, { recursive: true })
 
-  function cleanPath(p: string): string {
-    return p.trim().replace(/^"+|"+$/g, '') // enlève guillemets éventuels
-  }
-
-  const python = cleanPath(pythonPath)
-  const scraper = cleanPath(scraperPath)
-
-  if (!fs.existsSync(python)) {
-    throw new Error(`Python introuvable:\n${python}`)
-  }
-  if (!fs.existsSync(scraper)) {
-    throw new Error(`Scraper introuvable:\n${scraper}`)
-  }
+  // (Optionnel) créer la bibliothèque si elle n’existe pas encore
+  if (!fs.existsSync(libraryPath)) fs.mkdirSync(libraryPath, { recursive: true })
 
   const res = await runPython(
-    python,
-    scraper,
+    pythonPath.trim().replace(/^"+|"+$/g, ''),
+    scraperPath.trim().replace(/^"+|"+$/g, ''),
     ['-q', query.trim()],
-    libraryPath
+    parent // ✅ ici : pas libraryPath
   )
 
   if (res.code !== 0) {
-    throw new Error(
-      `Erreur scraper (code ${res.code})\n` +
-      (res.stderr || res.stdout || 'Erreur inconnue')
-    )
+    throw new Error(`Erreur scraper (code ${res.code})\n${res.stderr || res.stdout || ''}`)
   }
 
+  // ✅ maintenant le scraper a écrit dans parent\data\...
   return scanLibrary(libraryPath)
 })
 
