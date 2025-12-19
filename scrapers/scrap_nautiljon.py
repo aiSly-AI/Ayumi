@@ -13,7 +13,6 @@ from selenium.webdriver.common.by import By
 
 from selenium_stealth import stealth
 
-
 ###############################################################################
 
 
@@ -28,9 +27,11 @@ class ScrapMangaNautiljon:
             return
 
         self.__base_url = "https://www.nautiljon.com/"
-        self.__url_search = "search.php?cx=partner-pub-016984106292057030987%3Ayj-tngtyvhq\
-            &cof=FORID%3A10&ie=UTF-8&q="
-        self.__url = f"{self.__base_url}{self.__url_search}{query.replace(' ', '+')}"
+        self.__url_search = "search.php?cx=partner-pub-016984106292057030987\
+            %3Ayj-tngtyvhq&cof=FORID%3A10&ie=UTF-8&q="
+
+        q_formated = query.replace(' ', '+')
+        self.__url = f"{self.__base_url}{self.__url_search}{q_formated}"
 
         self.__first_page = ""
 
@@ -57,7 +58,10 @@ class ScrapMangaNautiljon:
         options.add_argument(f'user-agent={user_agent}')
 
         options.add_experimental_option("detach", True)
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option(
+            "excludeSwitches", 
+            ["enable-automation"]
+        )
         options.add_experimental_option('useAutomationExtension', False)
 
         self.__driver = webdriver.Chrome(options=options)
@@ -95,14 +99,20 @@ class ScrapMangaNautiljon:
 
         link = ""
 
-        manga_blocks = self.__driver.find_elements(By.CLASS_NAME, "gs-webResult.gs-result")
+        manga_blocks = self.__driver.find_elements(
+            By.CLASS_NAME, "gs-webResult.gs-result"
+        )
 
         found = False
         for manga_block in manga_blocks:
             child_elements = manga_block.find_elements(By.XPATH, ".//*")
+
             for child in child_elements:
                 if re.search("mangas", child.text, re.IGNORECASE):
-                    link = manga_block.find_element(By.TAG_NAME, "a").get_attribute("href")
+                    link = manga_block.find_element(
+                        By.TAG_NAME, "a"
+                    ).get_attribute("href")
+
                     if link is None:
                         raise ScrapNautiljonException("Link not found")
 
@@ -154,8 +164,12 @@ class ScrapMangaNautiljon:
 
             if span.get_attribute("class") == "bold":
                 if re.search("titre original", span.text, re.IGNORECASE):
-                    title_original = span.find_element(By.XPATH, "..").text.split(" / ")[0].strip()
-                    title_original = title_original.replace("Titre original : ", "").strip()
+                    title_original = span.find_element(By.XPATH, "..")
+                    title_original = title_original.text.split(" / ")[0]
+                    title_original = title_original.strip()
+                    title_original = title_original.replace("Titre original : ", "")
+                    title_original = title_original.strip()
+
                     title_japanese = span.find_element(By.XPATH, "..").text.strip()
 
                     if re.match(r'/', title_japanese):
@@ -201,7 +215,10 @@ class ScrapMangaNautiljon:
             dates = info.find_element(By.CLASS_NAME, "nav_vols.fright")
             divs = dates.find_elements(By.TAG_NAME, "div")
 
-            title_last_out = divs[0].find_element(By.TAG_NAME, "a").get_attribute("title")
+            title_last_out = divs[0].find_element(
+                By.TAG_NAME, "a"
+            ).get_attribute("title")
+
             if title_last_out is None:
                 raise ScrapNautiljonException("Title Last Out not found")
 
@@ -217,7 +234,10 @@ class ScrapMangaNautiljon:
                 }
             })
 
-            title_soon_out = divs[1].find_element(By.TAG_NAME, "a").get_attribute("title")
+            title_soon_out = divs[1].find_element(
+                By.TAG_NAME, "a"
+            ).get_attribute("title")
+
             if title_soon_out is None:
                 raise ScrapNautiljonException("Title Soon Out not found")
 
@@ -385,19 +405,5 @@ class ScrapIMGNautiljon:
 
 if __name__ == "__main__":
     # Arifureta (De zéro à héros) need spec (anime first and not manga on second)
-
-    # scrap = ScrapMangaNautiljon("moi, quand je me réincarne en slime", debug=True)
-    scrap = ScrapMangaNautiljon("kuma kuma kuma", debug=False)
-    # scrap = ScrapMangaNautiljon("legende vivante", debug=False)
-    # scrap = ScrapMangaNautiljon("sexy cosplay doll", debug=False)
-    # scrap = ScrapMangaNautiljon("Fun Territory", debug=False)
-    # scrap = ScrapMangaNautiljon("rising shield", debug=False)
-    # scrap = ScrapMangaNautiljon("demon slave", debug=False)
-    # scrap = ScrapMangaNautiljon("dungeon harem", debug=False)
-    # scrap = ScrapMangaNautiljon("cave king", debug=False)
-    # scrap = ScrapMangaNautiljon("dr stone", debug=False)
-    # scrap = ScrapMangaNautiljon("noble adventure", debug=False)
-    # scrap = ScrapMangaNautiljon("chilling in another", debug=False)
-    # scrap = ScrapMangaNautiljon("reincarned in sword", debug=False)
-
+    scrap = ScrapMangaNautiljon("moi, quand je me réincarne en slime", debug=True)
     scrap.scrap()
