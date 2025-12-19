@@ -22,6 +22,22 @@ class ScrapNautiljonException(Exception):
 
 
 class ScrapMangaNautiljon:
+    """
+    Scrap manga data from Nautiljon website
+    1. Search manga
+    2. Scrap manga information
+    3. Scrap manga volumes
+    4. Save data in JSON file
+
+    Args:
+        query (str|None): Manga name to search
+        debug (bool): Enable debug mode (show browser)
+    Returns:
+        None
+    Raises:
+        ScrapNautiljonException: If any error occurs during scraping
+    """
+
     def __init__(self, query:str|None = None, debug:bool = False) -> None:
         if query is None:
             # TODO: Raise an exception + log
@@ -175,7 +191,7 @@ class ScrapMangaNautiljon:
 
                     if re.match(r'/', title_japanese):
                         title_japanese = title_japanese.split(" / ")[1].strip()
-                    
+
                     title_japanese = title_japanese.replace(r"Titre original : ", "")
 
                     self.__data.update({
@@ -278,9 +294,10 @@ class ScrapMangaNautiljon:
 
             navigation_links.append(link_manga)
             self.__data["volumes"].update({
-                f"volume_{i + 1}": {
+                f"{i + 1}": {
+                    "number": i + 1,
                     "link": link_manga,
-                    "is_out": out
+                    "status": "OUT" if out else "ANNOUNCED"
                 }
             })
 
@@ -302,7 +319,7 @@ class ScrapMangaNautiljon:
                 raise ScrapNautiljonException("Image not found")
 
             img_src = img_src.strip()
-            self.__data["volumes"][f"volume_{i + 1}"].update({ "img_src": img_src })
+            self.__data["volumes"][f"{i + 1}"].update({ "img_src": img_src })
 
             self.__driver.close()
 
@@ -315,8 +332,23 @@ class ScrapMangaNautiljon:
                 print(f"final: {i + 1}/{len(navigation_links)}", flush=True)
 
     def __write_data(self, manga_title:str) -> None:
-        self.__data.update({ "date": time.strftime("%Y-%m-%d %H:%M:%S") })
-        self.__data.update({ "id": str(uuid.uuid4()) })
+        self.__data.update({
+            "id": str(uuid.uuid4()),
+            "lastScrapedAt": time.strftime("%Y-%m-%d %H:%M:%S"),
+        })
+
+        if "collection" not in self.__data:
+            self.__data.update({
+                "collection": {
+                    "owned": [],
+                    "wishlist": []
+                }
+            })
+
+        if "version" not in self.__data:
+            self.__data.update({ "version": 1 })
+        else:
+            self.__data["version"] += 1
 
         data_path = os.path.join(self.__data_folder, manga_title, "data.json")
 
@@ -351,6 +383,12 @@ class ScrapMangaNautiljon:
 
 
 class ScrapIMGNautiljon:
+    """
+    Scrap images from Nautiljon manga data
+    1. Check if folder exist
+    2. Download and save images in folder
+    """
+
     def __init__(self, data:dict, manga_title:str) -> None:
         self.__data = data
         self.__manga_title = manga_title
