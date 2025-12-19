@@ -103,7 +103,6 @@ class ScrapMangaNautiljon:
         is_folder_exist = False
 
         for folder in folders:
-            print(f"Folder: {folder} - Query: {self.__query}")
             if re.search(manga_title, folder, re.IGNORECASE):
                 is_folder_exist = True
                 break
