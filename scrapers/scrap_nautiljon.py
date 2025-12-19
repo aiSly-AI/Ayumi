@@ -1,4 +1,5 @@
-# pylint: disable=missing-module-docstring, missing-class-docstring, missing-function-docstring, fixme
+# pylint: disable=missing-module-docstring, missing-class-docstring, missing-function-docstring,
+# pylint: disable=fixme
 
 # Import Modules
 import os
