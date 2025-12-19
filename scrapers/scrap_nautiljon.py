@@ -7,6 +7,7 @@ import re
 import json
 import time
 import uuid
+import argparse
 
 from datetime import datetime
 
@@ -218,8 +219,6 @@ class ScrapMangaNautiljon:
             ul = info.find_elements(By.TAG_NAME, "ul")
 
             for li in ul[1].find_elements(By.TAG_NAME, "li"):
-                print(f"Info Text: {li.text}")
-
                 if re.search(r"Nb volumes VO", li.text, re.IGNORECASE):
                     nb_volumes_vo = li.text.split(":")[1].strip()
                     self.__data.update({ "NbVolumesVO": nb_volumes_vo })
@@ -446,7 +445,11 @@ class ScrapIMGNautiljon:
 
 
 if __name__ == "__main__":
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("-q", "--query", type=str, help="Manga name to search")
+    argparser.add_argument("-d", "--debug", default=False, help="Enable debug mode")
+    args = argparser.parse_args()
+
     # Arifureta (De zéro à héros) need spec (anime first and not manga on second)
-    # scrap = ScrapMangaNautiljon("moi, quand je me réincarne en slime", debug=True)
-    scrap = ScrapMangaNautiljon("chilling in another", debug=True)
+    scrap = ScrapMangaNautiljon(args.query, debug=args.debug)
     scrap.scrap()
