@@ -168,13 +168,15 @@ class ScrapMangaNautiljon:
                     title_original = span.find_element(By.XPATH, "..")
                     title_original = title_original.text.split(" / ")[0]
                     title_original = title_original.strip()
-                    title_original = title_original.replace("Titre original : ", "")
+                    title_original = title_original.replace(r"Titre original : ", "")
                     title_original = title_original.strip()
 
                     title_japanese = span.find_element(By.XPATH, "..").text.strip()
 
                     if re.match(r'/', title_japanese):
                         title_japanese = title_japanese.split(" / ")[1].strip()
+                    
+                    title_japanese = title_japanese.replace(r"Titre original : ", "")
 
                     self.__data.update({
                         "title original": title_original,
