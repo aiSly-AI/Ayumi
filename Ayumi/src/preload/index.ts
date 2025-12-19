@@ -5,7 +5,10 @@ import { electronAPI } from '@electron-toolkit/preload'
 const api = {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   selectLibraryFolder: () => ipcRenderer.invoke('settings:selectLibraryFolder'),
-  scanLibrary: () => ipcRenderer.invoke('library:scan')
+  scanLibrary: () => ipcRenderer.invoke('library:scan'),
+  searchAndRescan: (query: string) => ipcRenderer.invoke('scraper:search', query),
+  selectPython: () => ipcRenderer.invoke('settings:selectPython'),
+  selectScraper: () => ipcRenderer.invoke('settings:selectScraper')
 }
 
 // Expose seulement une fois, en respectant context isolation

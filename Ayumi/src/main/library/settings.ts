@@ -2,9 +2,11 @@ import { app } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 
+
 export type Settings = {
     libraryPath?: string
     pythonPath?: string
+    scraperPath?: string
 }
 
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json')
