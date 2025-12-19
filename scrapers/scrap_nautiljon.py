@@ -7,6 +7,9 @@ import re
 import json
 import time
 import uuid
+
+from datetime import datetime
+
 import requests
 
 from selenium import webdriver
@@ -166,7 +169,7 @@ class ScrapMangaNautiljon:
         manga_title = manga_title.strip()
 
         self.__create_folder(manga_title)
-        self.__data.update({ "title": manga_title })
+        self.__data.update({ "titles": { "main": manga_title} })
 
         return manga_title
 
@@ -177,7 +180,7 @@ class ScrapMangaNautiljon:
         for span in spans:
             if span.get_attribute("itemprop") == "alternateName":
                 title_alternative = span.text
-                self.__data.update({ "title alternatif": title_alternative })
+                self.__data["titles"].update({ "alt": title_alternative })
 
             if span.get_attribute("class") == "bold":
                 if re.search("titre original", span.text, re.IGNORECASE):
@@ -194,9 +197,9 @@ class ScrapMangaNautiljon:
 
                     title_japanese = title_japanese.replace(r"Titre original : ", "")
 
-                    self.__data.update({
-                        "title original": title_original,
-                        "title japonais": title_japanese
+                    self.__data["titles"].update({
+                        "original": title_original,
+                        "japanese": title_japanese
                     })
 
         volumes = self.__driver.find_element(By.ID, "edition_0-1")
@@ -212,24 +215,18 @@ class ScrapMangaNautiljon:
 
         infos = self.__driver.find_elements(By.CLASS_NAME, "liste_infos")
         for info in infos:
-            ul = info.find_element(By.TAG_NAME, "ul")
+            ul = info.find_elements(By.TAG_NAME, "ul")
 
-            for li in ul.find_elements(By.TAG_NAME, "li"):
-                if re.search("titre alternatif", li.text, re.IGNORECASE):
-                    title_alternative = li.text.split(":")[1].split(" / ")[0].strip()
-                    self.__data.update({ "titre alternatif": title_alternative })
+            for li in ul[1].find_elements(By.TAG_NAME, "li"):
+                print(f"Info Text: {li.text}")
 
-                if re.search("titre original", li.text, re.IGNORECASE):
-                    title_original = li.text.split(":")[1].split(" / ")[0].strip()
-                    self.__data.update({ "titre original": title_original })
-
-                if re.search("Nb volumes VO", li.text, re.IGNORECASE):
+                if re.search(r"Nb volumes VO", li.text, re.IGNORECASE):
                     nb_volumes_vo = li.text.split(":")[1].strip()
-                    self.__data.update({ "Nb volumes VO": nb_volumes_vo })
+                    self.__data.update({ "NbVolumesVO": nb_volumes_vo })
 
-                if re.search("Nb volumes VF", li.text, re.IGNORECASE):
+                if re.search(r"Nb volumes VF", li.text, re.IGNORECASE):
                     nb_volumes_vf = li.text.split(":")[1].strip()
-                    self.__data.update({ "Nb volumes VF": nb_volumes_vf })
+                    self.__data.update({ "NbVolumesVF": nb_volumes_vf })
 
             dates = info.find_element(By.CLASS_NAME, "nav_vols.fright")
             divs = dates.find_elements(By.TAG_NAME, "div")
@@ -245,9 +242,11 @@ class ScrapMangaNautiljon:
 
             date = divs[0].find_element(By.TAG_NAME, "span").text
             date = date.strip()
+            # Change format date to YYYY-MM-DD
+            date = datetime.strptime(date, "%d/%m/%Y").strftime("%Y-%m-%d")
 
             self.__data.update({
-                "last_out": {
+                "lastOut": {
                     "title": title_last_out,
                     "date": date
                 }
@@ -264,9 +263,11 @@ class ScrapMangaNautiljon:
 
             date = divs[1].find_element(By.TAG_NAME, "span").text
             date = date.strip()
+            # Change format date to YYYY-MM-DD
+            date = datetime.strptime(date, "%d/%m/%Y").strftime("%Y-%m-%d")
 
             self.__data.update({
-                "soon_out": {
+                "soonOut": {
                     "title": title_soon_out,
                     "date": date
                 }
@@ -279,7 +280,7 @@ class ScrapMangaNautiljon:
         navigation_links = []
         self.__data.update({ "volumes": {} })
 
-        last_num_out = int(self.__data["last_out"]["title"].split(" ")[-1])
+        last_num_out = int(self.__data["lastOut"]["title"].split(" ")[-1])
 
         for i, manga in enumerate(mangas):
             link_manga = manga.find_element(By.TAG_NAME, "a").get_attribute("href")
@@ -319,7 +320,7 @@ class ScrapMangaNautiljon:
                 raise ScrapNautiljonException("Image not found")
 
             img_src = img_src.strip()
-            self.__data["volumes"][f"{i + 1}"].update({ "img_src": img_src })
+            self.__data["volumes"][f"{i + 1}"].update({ "imgSrc": img_src })
 
             self.__driver.close()
 
@@ -440,11 +441,12 @@ class ScrapIMGNautiljon:
 
         if nb_images < len(volumes):
             for volume in volumes:
-                img_src = volumes[volume]["img_src"]
+                img_src = volumes[volume]["imgSrc"]
                 self.__download_img(img_src, volume)
 
 
 if __name__ == "__main__":
     # Arifureta (De zéro à héros) need spec (anime first and not manga on second)
-    scrap = ScrapMangaNautiljon("moi, quand je me réincarne en slime", debug=True)
+    # scrap = ScrapMangaNautiljon("moi, quand je me réincarne en slime", debug=True)
+    scrap = ScrapMangaNautiljon("chilling in another", debug=True)
     scrap.scrap()
