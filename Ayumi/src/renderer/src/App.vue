@@ -1,26 +1,47 @@
 <script setup lang="ts">
-import Versions from './components/Versions.vue'
+import { onMounted, ref } from 'vue'
 
-const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
+const libraryPath = ref<string | undefined>()
+const series = ref<any[]>([])
+
+async function refresh(): Promise<void> {
+  series.value = await window.api.scanLibrary()
+}
+
+async function pickFolder(): Promise<void> {
+  const p = await window.api.selectLibraryFolder()
+  if (p) {
+    libraryPath.value = p
+    await refresh()
+  }
+}
+
+onMounted(async () => {
+  const s = await window.api.getSettings()
+  libraryPath.value = s.libraryPath
+  if (libraryPath.value) await refresh()
+})
 </script>
 
 <template>
-  <img alt="logo" class="logo" src="./assets/electron.svg" />
-  <div class="creator">Powered by electron-vite</div>
-  <div class="text">
-    Build an Electron app with
-    <span class="vue">Vue</span>
-    and
-    <span class="ts">TypeScript</span>
-  </div>
-  <p class="tip">Please try pressing <code>F12</code> to open the devTool</p>
-  <div class="actions">
-    <div class="action">
-      <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">Documentation</a>
+  <div style="padding: 16px; font-family: system-ui;">
+    <h2>Ayumi</h2>
+
+    <div v-if="!libraryPath">
+      <p>Aucune bibliothèque configurée.</p>
+      <button @click="pickFolder">Choisir le dossier bibliothèque</button>
     </div>
-    <div class="action">
-      <a target="_blank" rel="noreferrer" @click="ipcHandle">Send IPC</a>
+
+    <div v-else>
+      <p><b>Bibliothèque :</b> {{ libraryPath }}</p>
+      <button @click="refresh">Scanner</button>
+
+      <hr style="margin: 16px 0;" />
+
+      <div v-for="s in series" :key="s.folderPath" style="margin-bottom: 12px;">
+        <div><b>{{ s.title }}</b> — manquants: {{ s.missingCount }} — prog: {{ s.progressLabel }}</div>
+        <div v-if="s.soonOut">prochain: {{ s.soonOut.title }} ({{ s.soonOut.dateISO ?? s.soonOut.dateRaw }})</div>
+      </div>
     </div>
   </div>
-  <Versions />
 </template>

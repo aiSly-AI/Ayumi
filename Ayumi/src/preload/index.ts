@@ -1,12 +1,14 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-// Custom APIs for renderer
-const api = {}
+// Tu définis ici toutes tes fonctions "api"
+const api = {
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  selectLibraryFolder: () => ipcRenderer.invoke('settings:selectLibraryFolder'),
+  scanLibrary: () => ipcRenderer.invoke('library:scan')
+}
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
+// Expose seulement une fois, en respectant context isolation
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
@@ -15,8 +17,8 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
-  // @ts-ignore (define in dts)
   window.electron = electronAPI
-  // @ts-ignore (define in dts)
   window.api = api
 }
+
+export type Api = typeof api
