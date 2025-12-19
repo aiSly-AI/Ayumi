@@ -50,11 +50,72 @@ onMounted(async () => {
   await refreshSettings()
   if (settings.value.libraryPath) await refreshLibrary()
 })
+
+const showAdd = ref(false)
+
+function openAdd(): void {
+  showAdd.value = true
+  errorMsg.value = null
+  q.value = ''
+}
+
+async function confirmAdd(): Promise<void> {
+  await addBySearch()
+  if (!errorMsg.value) showAdd.value = false
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.ctrlKey && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    openAdd()
+  }
+}
 </script>
 
 <template>
   <div style="padding:16px; font-family: system-ui;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
     <h2>Ayumi</h2>
+
+      <button
+        v-if="settings.libraryPath && settings.pythonPath && settings.scraperPath"
+        @click="openAdd"
+      >
+        ➕ Ajouter
+      </button>
+    </div>
+
+  <!-- MODAL -->
+  <div v-if="showAdd"
+      style="position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center;">
+    <div style="background:#111; padding:16px; border-radius:12px; width:520px; max-width:90vw;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <b>Ajouter un manga</b>
+        <button @click="showAdd=false">✕</button>
+      </div>
+
+      <div style="display:flex; gap:8px;">
+        <input
+          v-model="q"
+          placeholder="ex: dr stone"
+          style="flex:1"
+          @keydown.enter="confirmAdd"
+        />
+        <button :disabled="loading || !q.trim()" @click="confirmAdd">
+          {{ loading ? 'Ajout...' : 'Ajouter' }}
+        </button>
+      </div>
+
+      <p v-if="errorMsg" style="color:#ff6b6b; white-space:pre-wrap; margin-top:12px">
+        {{ errorMsg }}
+      </p>
+
+      <p style="opacity:.7; margin-top:10px; font-size:12px;">
+        Astuce: appuie sur Entrée pour lancer.
+      </p>
+    </div>
+  </div>
+
 
     <!-- 1) Pas de bibliothèque -->
     <div v-if="!settings.libraryPath">
